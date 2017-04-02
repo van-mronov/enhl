@@ -1,18 +1,7 @@
 defmodule ENHL do
-  @moduledoc """
-  Documentation for ENHL.
-  """
+  use Application
 
-  @doc """
-  Hello world.
-
-  ## Examples
-
-      iex> ENHL.hello
-      :world
-
-  """
-  def hello do
-    :world
+  def start(_type, _args) do
+    ENHL.Supervisor.start_link
   end
 end

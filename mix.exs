@@ -14,8 +14,7 @@ defmodule ENHL.Mixfile do
   #
   # Type "mix help compile.app" for more information
   def application do
-    # Specify extra applications you'll use from Erlang/Elixir
-    [extra_applications: [:logger, :httpoison]]
+    [extra_applications: [:logger, :httpoison], mod: {ENHL, []}]
   end
 
   # Dependencies can be Hex packages:
