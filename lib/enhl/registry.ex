@@ -53,12 +53,4 @@ defmodule ENHL.Registry do
   defp game_key(year, game_id) do
     :crypto.hash(:sha256, "#{year}#{game_id}") |> Base.encode64
   end
-
-  # defp get_report!(year, game_id) do
-  #   years = "#{year}#{year + 1}"
-  #   filename = "PL0#{20_000 + game_id}.HTM"
-  #   url = "http://www.nhl.com/scores/htmlreports/#{years}/#{filename}"
-  #   {:ok, resp} = HTTPoison.get! url
-  #   resp.body
-  # end
 end
