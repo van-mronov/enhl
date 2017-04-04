@@ -7,9 +7,10 @@ defmodule ENHL.Supervisor do
 
   def init(:ok) do
     children = [
-      worker(ENHL.ReportProvider, [ENHL.ReportProvider])
+      worker(ENHL.Registry, []),
+      supervisor(ENHL.Report.Supervisor, [])
     ]
 
-    supervise(children, strategy: :one_for_one)
+    supervise(children, strategy: :rest_for_one)
   end
 end
