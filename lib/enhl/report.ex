@@ -85,7 +85,7 @@ defmodule ENHL.Report do
     end
   end
 
-  def handle_call(:parse_game_info, _from, {_year, game_id, _url, raw_html, _game_info} = state) do
+  def handle_call(:parse_game_info, _from, {year, game_id, url, raw_html, game_info} = state) do
     # TODO: add error replies
 
     props = Floki.find(raw_html, "td[align='center']")
@@ -93,7 +93,8 @@ defmodule ENHL.Report do
     if game_id != actual_game_id(props) do
       {:reply, {:error, :invalid_game_id}, state}
     else
-      {:reply, {:ok, %{:game_id => props}}, state}
+      game_info = Map.merge(%{game_id: game_id}, parse_arena_info(props))
+      {:reply, {:ok, game_info}, {year, game_id, url, raw_html, game_info}}
     end
   end
 
@@ -104,5 +105,24 @@ defmodule ENHL.Report do
     |> String.split(" ")
     |> List.last
     |> String.to_integer
+  end
+
+  defp parse_arena_info(props) do
+    [attendance_str, arena] = props
+                              |> Enum.fetch!(10)
+                              |> Floki.text
+                              |> String.to_charlist
+                              |> :binary.list_to_bin
+                              |> :binary.replace(<<160>>, <<" ">>, [:global]) # &nbsp;
+                              |> String.replace(" at ", "@")
+                              |> String.split("@")
+
+    attendance = attendance_str
+                 |> String.split(" ")
+                 |> List.last
+                 |> String.replace(",", "")
+                 |> String.to_integer
+
+    %{arena: arena, attendance: attendance}
   end
 end
