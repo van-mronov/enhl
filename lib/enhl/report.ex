@@ -53,6 +53,15 @@ defmodule ENHL.Report do
     GenServer.call(report, :parse_game_info)
   end
 
+  @doc """
+  Returns the game_info of the `report`.
+
+  Returns `{:ok, game_info}`.
+  """
+  def game_info(report) do
+    GenServer.call(report, :game_info)
+  end
+
   ## Server Callbacks
 
   def init(year: year, game_id: game_id) do
@@ -75,6 +84,10 @@ defmodule ENHL.Report do
     {:reply, {:ok, url}, state}
   end
 
+  def handle_call(:game_info, _from, {_year, _game_id, _url, _raw_html, game_info} = state) do
+    {:reply, {:ok, game_info}, state}
+  end
+
   def handle_call(:fetch, _from, {year, game_id, url, raw_html, game_info} = state) do
     # TODO: add error replies
     if raw_html != nil do
@@ -94,7 +107,7 @@ defmodule ENHL.Report do
       {:reply, {:error, :invalid_game_id}, state}
     else
       game_info = Map.merge(%{game_id: game_id}, parse_arena_info(props))
-      {:reply, {:ok, game_info}, {year, game_id, url, raw_html, game_info}}
+      {:reply, :ok, {year, game_id, url, raw_html, game_info}}
     end
   end
 

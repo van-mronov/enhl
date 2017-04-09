@@ -4,7 +4,8 @@ defmodule ENHL.ReportTest do
   test "parse game info" do
     {:ok, report} = ENHL.Registry.report(2009, 20)
     ENHL.Report.fetch(report)
-    {:ok, result} = ENHL.Report.parse_game_info(report)
+    ENHL.Report.parse_game_info(report)
+    {:ok, result} = ENHL.Report.game_info(report)
 
     assert result == nil
   end
