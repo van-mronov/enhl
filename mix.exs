@@ -15,7 +15,7 @@ defmodule ENHL.Mixfile do
   # Type "mix help compile.app" for more information
   def application do
     [
-      extra_applications: [:logger, :crypto, :httpoison],
+      extra_applications: [:logger, :crypto, :httpoison, :timex],
       mod: {ENHL, []}
     ]
   end
@@ -30,6 +30,9 @@ defmodule ENHL.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{:httpoison, "~> 0.10.0"}, {:floki, "~> 0.14.0"}]
+    [{:httpoison, "~> 0.10.0"},
+     {:floki, "~> 0.14.0"},
+     {:timex, "~> 3.0"}
+    ]
   end
 end

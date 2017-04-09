@@ -107,6 +107,8 @@ defmodule ENHL.Report do
       {:reply, {:error, :invalid_game_id}, state}
     else
       game_info = Map.merge(%{game_id: game_id}, parse_arena_info(props))
+      game_info = Map.merge(game_info, parse_game_time(props))
+
       {:reply, :ok, {year, game_id, url, raw_html, game_info}}
     end
   end
@@ -124,9 +126,7 @@ defmodule ENHL.Report do
     [attendance_str, arena] = props
                               |> Enum.fetch!(10)
                               |> Floki.text
-                              |> String.to_charlist
-                              |> :binary.list_to_bin
-                              |> :binary.replace(<<160>>, <<" ">>, [:global]) # &nbsp;
+                              |> convert_nbsp
                               |> String.replace(" at ", "@")
                               |> String.split("@")
 
@@ -137,5 +137,31 @@ defmodule ENHL.Report do
                  |> String.to_integer
 
     %{arena: arena, attendance: attendance}
+  end
+
+  defp parse_game_time(props) do
+    date = props |> Enum.fetch!(9) |> Floki.text
+    [start_time, end_time] = props
+                             |> Enum.fetch!(11)
+                             |> Floki.text
+                             |> convert_nbsp
+                             |> String.split(";")
+                             |> Enum.map(fn x -> x |> String.trim
+                                                   |> String.split(" ", parts: 2)
+                                                   |> List.last
+                                         end)
+
+    %{start: parse_datetime(date, start_time), end: parse_datetime(date, end_time)}
+  end
+
+  defp convert_nbsp(input) do
+    input
+    |> String.to_charlist
+    |> :binary.list_to_bin
+    |> :binary.replace(<<160>>, <<" ">>, [:global]) # &nbsp;
+  end
+
+  defp parse_datetime(date, time) do
+    Timex.parse!("#{time}, #{date}", "%k:%M %Z, %A, %B %e, %Y", :strftime)
   end
 end
