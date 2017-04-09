@@ -14,7 +14,10 @@ defmodule ENHL.Mixfile do
   #
   # Type "mix help compile.app" for more information
   def application do
-    [extra_applications: [:logger, :crypto, :httpoison], mod: {ENHL, []}]
+    [
+      extra_applications: [:logger, :crypto, :httpoison],
+      mod: {ENHL, []}
+    ]
   end
 
   # Dependencies can be Hex packages:
