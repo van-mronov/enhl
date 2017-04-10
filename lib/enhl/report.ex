@@ -93,8 +93,7 @@ defmodule ENHL.Report do
 
   defp actual_game_id(props) do
     props
-    |> Enum.fetch!(12)
-    |> Floki.text
+    |> text_element_value(12)
     |> String.split(" ")
     |> List.last
     |> String.to_integer
@@ -110,8 +109,7 @@ defmodule ENHL.Report do
 
   defp parse_arena_info(props) do
     [attendance_str, arena] = props
-                              |> Enum.fetch!(10)
-                              |> Floki.text
+                              |> text_element_value(10)
                               |> convert_nbsp
                               |> String.replace("at", "@")
                               |> String.split("@")
@@ -127,10 +125,9 @@ defmodule ENHL.Report do
   end
 
   defp parse_game_time(props) do
-    date = props |> Enum.fetch!(9) |> Floki.text
+    date = text_element_value(props, 9)
     [start_time, end_time] = props
-                             |> Enum.fetch!(11)
-                             |> Floki.text
+                             |> text_element_value(11)
                              |> convert_nbsp
                              |> String.split(";")
                              |> Enum.map(fn x -> x |> String.trim
@@ -153,16 +150,16 @@ defmodule ENHL.Report do
   end
 
   defp parse_team(props, score_index, game_type) do
-    [title, games] = props
-                     |> Enum.fetch!(score_index + 2)
-                     |> Floki.text
-                     |> String.split("\n")
-
+    [title, games] = props |> text_element_value(score_index + 2) |> String.split("\n")
     games = games |> String.split
     game = games |> Enum.at(1) |> String.to_integer
     game_type_n = games |> List.last |> String.to_integer
-    score = props |> Enum.fetch!(score_index)|> Floki.text |> String.to_integer
+    score = props |> text_element_value(score_index) |> String.to_integer
 
     %{:title => title, :game => game, game_type => game_type_n, :score => score}
+  end
+
+  defp text_element_value(props, index) do
+    props |> Enum.fetch!(index) |> Floki.text
   end
 end
