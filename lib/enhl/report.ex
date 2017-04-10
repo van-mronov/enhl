@@ -127,8 +127,9 @@ defmodule ENHL.Report do
                               |> Enum.fetch!(10)
                               |> Floki.text
                               |> convert_nbsp
-                              |> String.replace(" at ", "@")
+                              |> String.replace("at", "@")
                               |> String.split("@")
+                              |> Enum.map(fn x -> x |> String.trim end)
 
     attendance = attendance_str
                  |> String.split(" ")
