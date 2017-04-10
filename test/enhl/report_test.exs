@@ -30,4 +30,15 @@ defmodule ENHL.ReportTest do
 
     assert result.arena == "Scotiabank Place"
   end
+
+  test "parse events" do
+    {:ok, report} = ENHL.Registry.report(2009, 37)
+    ENHL.Report.fetch(report)
+    ENHL.Report.parse_events(report)
+    {:ok, events} = ENHL.Report.events(report)
+
+    IO.inspect events |> Enum.at(2)
+
+    assert length(events) != 0
+  end
 end

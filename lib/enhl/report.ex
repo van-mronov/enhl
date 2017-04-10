@@ -91,6 +91,13 @@ defmodule ENHL.Report do
     end
   end
 
+  def handle_call(:parse_events, _from, state) do
+    events = state.html |> Floki.find("tr[class='evenColor']") |> Enum.map(&parse_event/1)
+    {:reply, :ok, put_in(state.events, events)}
+  end
+
+  ## Private functions
+
   defp actual_game_id(props) do
     props
     |> text_element_value(12)
@@ -151,15 +158,39 @@ defmodule ENHL.Report do
 
   defp parse_team(props, score_index, game_type) do
     [title, games] = props |> text_element_value(score_index + 2) |> String.split("\n")
-    games = games |> String.split
-    game = games |> Enum.at(1) |> String.to_integer
-    game_type_n = games |> List.last |> String.to_integer
-    score = props |> text_element_value(score_index) |> String.to_integer
+    games = String.split(games)
 
-    %{:title => title, :game => game, game_type => game_type_n, :score => score}
+    %{
+      :title    => title,
+      :game     => games |> Enum.at(1) |> String.to_integer,
+      game_type => games |> List.last |> String.to_integer,
+      :score    => int_element_value(props, score_index),
+     }
+  end
+
+  defp parse_event(html) do
+    html |> Floki.find("td") |> common_event_info
+  end
+
+  defp common_event_info(props) do
+    [time, elapsed] = text_element_value(props, 3) |> String.split
+
+    %{
+      event_id: int_element_value(props,  0),
+      period:   int_element_value(props,  1),
+      str:      text_element_value(props, 2),
+      time:     time,
+      elapsed:  elapsed,
+      type:     text_element_value(props, 4),
+      desc:     text_element_value(props, 5),
+     }
   end
 
   defp text_element_value(props, index) do
     props |> Enum.fetch!(index) |> Floki.text
+  end
+
+  defp int_element_value(props, index) do
+    props |> text_element_value(index) |> String.to_integer
   end
 end
