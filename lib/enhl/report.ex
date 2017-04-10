@@ -108,6 +108,8 @@ defmodule ENHL.Report do
     else
       game_info = Map.merge(%{game_id: game_id}, parse_arena_info(props))
       game_info = Map.merge(game_info, parse_game_time(props))
+      game_info = Map.merge(game_info, %{visitor: parse_team(props, 3, :away)})
+      game_info = Map.merge(game_info, %{home: parse_team(props, 16, :home)})
 
       {:reply, :ok, {year, game_id, url, raw_html, game_info}}
     end
@@ -164,5 +166,19 @@ defmodule ENHL.Report do
 
   defp parse_datetime(date, time) do
     Timex.parse!("#{time}, #{date}", "%k:%M %Z, %A, %B %e, %Y", :strftime)
+  end
+
+  defp parse_team(props, score_index, game_type) do
+    [title, games] = props
+                     |> Enum.fetch!(score_index + 2)
+                     |> Floki.text
+                     |> String.split("\n")
+
+    games = games |> String.split
+    game = games |> Enum.at(1) |> String.to_integer
+    game_type_n = games |> List.last |> String.to_integer
+    score = props |> Enum.fetch!(score_index)|> Floki.text |> String.to_integer
+
+    %{:title => title, :game => game, game_type => game_type_n, :score => score}
   end
 end
