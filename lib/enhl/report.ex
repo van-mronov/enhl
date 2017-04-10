@@ -36,6 +36,15 @@ defmodule ENHL.Report do
   end
 
   @doc """
+  Returns the game_info of the `report`.
+
+  Returns `{:ok, game_info}`.
+  """
+  def game_info(report) do
+    GenServer.call(report, :game_info)
+  end
+
+  @doc """
   Fetches the report from NHL site.
 
   Returns `:ok` if the report fetched successfully, `:error` otherwise.
@@ -53,15 +62,6 @@ defmodule ENHL.Report do
     GenServer.call(report, :parse_game_info)
   end
 
-  @doc """
-  Returns the game_info of the `report`.
-
-  Returns `{:ok, game_info}`.
-  """
-  def game_info(report) do
-    GenServer.call(report, :game_info)
-  end
-
   ## Server Callbacks
 
   def init(year: year, game_id: game_id) do
@@ -72,33 +72,33 @@ defmodule ENHL.Report do
     {:ok, {year, game_id, url, nil, nil}}
   end
 
-  def handle_call(:year, _from, {year, _game_id, _url, _raw_html, _game_info} = state) do
+  def handle_call(:year, _from, {year, _game_id, _url, _game_info, _raw_html} = state) do
     {:reply, {:ok, year}, state}
   end
 
-  def handle_call(:game_id, _from, {_year, game_id, _url, _raw_html, _game_info} = state) do
+  def handle_call(:game_id, _from, {_year, game_id, _url, _game_info, _raw_html} = state) do
     {:reply, {:ok, game_id}, state}
   end
 
-  def handle_call(:url, _from, {_year, _game_id, url, _raw_html, _game_info} = state) do
+  def handle_call(:url, _from, {_year, _game_id, url, _game_info, _raw_html} = state) do
     {:reply, {:ok, url}, state}
   end
 
-  def handle_call(:game_info, _from, {_year, _game_id, _url, _raw_html, game_info} = state) do
+  def handle_call(:game_info, _from, {_year, _game_id, _url, game_info, _raw_html} = state) do
     {:reply, {:ok, game_info}, state}
   end
 
-  def handle_call(:fetch, _from, {year, game_id, url, raw_html, game_info} = state) do
+  def handle_call(:fetch, _from, {year, game_id, url, game_info, raw_html} = state) do
     # TODO: add error replies
     if raw_html != nil do
       {:reply, :ok, state}
     else
       response = HTTPoison.get! url
-      {:reply, :ok, {year, game_id, url, response.body, game_info}}
+      {:reply, :ok, {year, game_id, url, game_info, response.body}}
     end
   end
 
-  def handle_call(:parse_game_info, _from, {year, game_id, url, raw_html, game_info} = state) do
+  def handle_call(:parse_game_info, _from, {year, game_id, url, game_info, raw_html} = state) do
     # TODO: add error replies
 
     props = Floki.find(raw_html, "td[align='center']")
@@ -111,7 +111,7 @@ defmodule ENHL.Report do
       game_info = Map.merge(game_info, %{visitor: parse_team(props, 3, :away)})
       game_info = Map.merge(game_info, %{home: parse_team(props, 16, :home)})
 
-      {:reply, :ok, {year, game_id, url, raw_html, game_info}}
+      {:reply, :ok, {year, game_id, url, game_info, raw_html}}
     end
   end
 
