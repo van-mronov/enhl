@@ -28,6 +28,6 @@ defmodule ENHL.ReportTest do
     ENHL.Report.parse_game_info(report)
     {:ok, result} = ENHL.Report.game_info(report)
 
-    assert result == nil
+    assert result.arena == "Scotiabank Place"
   end
 end

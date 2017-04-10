@@ -65,10 +65,7 @@ defmodule ENHL.Report do
   ## Server Callbacks
 
   def init(year: year, game_id: game_id) do
-    years = "#{year}#{year + 1}"
-    filename = "PL0#{20_000 + game_id}.HTM"
-    url = "http://www.nhl.com/scores/htmlreports/#{years}/#{filename}"
-
+    url = "http://www.nhl.com/scores/htmlreports/#{year}#{year + 1}/PL0#{20_000 + game_id}.HTM"
     {:ok, %{year: year, game_id: game_id, url: url, game_info: nil, events: nil, html: nil}}
   end
 
@@ -80,18 +77,13 @@ defmodule ENHL.Report do
 
   def handle_call(:fetch, _from, state) do
     # TODO: add error replies
-    if state.html != nil do
-      {:reply, :ok, state}
-    else
-      {:reply, :ok, put_in(state.html, HTTPoison.get!(state.url).body)}
-    end
+    if state.html != nil, do:   {:reply, :ok, state},
+                          else: {:reply, :ok, put_in(state.html, HTTPoison.get!(state.url).body)}
   end
 
   def handle_call(:parse_game_info, _from, state) do
     # TODO: add error replies
-
     props = Floki.find(state.html, "td[align='center']")
-
     if state.game_id != actual_game_id(props) do
       {:reply, {:error, :invalid_game_id}, state}
     else
@@ -112,8 +104,8 @@ defmodule ENHL.Report do
     %{game_id: game_id}
     |> Map.merge(parse_arena_info(props))
     |> Map.merge(parse_game_time(props))
-    |> Map.merge(%{visitor: parse_team(props, 3, :away)})
-    |> Map.merge(%{home: parse_team(props, 16, :home)})
+    |> Map.merge(%{visitor: parse_team(props,  3, :away)})
+    |> Map.merge(%{home:    parse_team(props, 16, :home)})
   end
 
   defp parse_arena_info(props) do
