@@ -4,63 +4,63 @@ defmodule ENHL.Report do
   @doc """
   Starts a new report.
   """
-  def start_link(year, game_id) do
-    GenServer.start_link(__MODULE__, year: year, game_id: game_id)
-  end
+  def start_link(year, game_id), do: GenServer.start_link(__MODULE__, year: year, game_id: game_id)
 
   @doc """
   Returns the year of the `report`.
 
   Returns `{:ok, year}`.
   """
-  def year(report) do
-    GenServer.call(report, :year)
-  end
+  def year(report), do: GenServer.call(report, :year)
 
   @doc """
   Returns the game_id of the `report`.
 
   Returns `{:ok, game_id}`.
   """
-  def game_id(report) do
-    GenServer.call(report, :game_id)
-  end
+  def game_id(report), do: GenServer.call(report, :game_id)
 
   @doc """
   Returns the url of the `report`.
 
   Returns `{:ok, url}`.
   """
-  def url(report) do
-    GenServer.call(report, :url)
-  end
+  def url(report), do: GenServer.call(report, :url)
 
   @doc """
   Returns the game_info of the `report`.
 
   Returns `{:ok, game_info}`.
   """
-  def game_info(report) do
-    GenServer.call(report, :game_info)
-  end
+  def game_info(report), do: GenServer.call(report, :game_info)
+
+  @doc """
+  Returns the events of the `report`.
+
+  Returns `{:ok, events}`.
+  """
+  def events(report), do: GenServer.call(report, :events)
 
   @doc """
   Fetches the report from NHL site.
 
   Returns `:ok` if the report fetched successfully, `:error` otherwise.
   """
-  def fetch(report) do
-    GenServer.call(report, :fetch, 30000)
-  end
+  def fetch(report), do: GenServer.call(report, :fetch, 30000)
 
   @doc """
   Parses the game info from report.
 
   Returns `:ok` if the report parsed successfully, `:error` otherwise.
   """
-  def parse_game_info(report) do
-    GenServer.call(report, :parse_game_info)
-  end
+  def parse_game_info(report), do: GenServer.call(report, :parse_game_info)
+
+  @doc """
+  Parses the game events from report.
+
+  Returns `:ok` if the report parsed successfully, `:error` otherwise.
+  """
+  def parse_events(report), do: GenServer.call(report, :parse_events)
 
   ## Server Callbacks
 
@@ -69,49 +69,33 @@ defmodule ENHL.Report do
     filename = "PL0#{20_000 + game_id}.HTM"
     url = "http://www.nhl.com/scores/htmlreports/#{years}/#{filename}"
 
-    {:ok, {year, game_id, url, nil, nil}}
+    {:ok, %{year: year, game_id: game_id, url: url, game_info: nil, events: nil, html: nil}}
   end
 
-  def handle_call(:year, _from, {year, _game_id, _url, _game_info, _raw_html} = state) do
-    {:reply, {:ok, year}, state}
-  end
+  def handle_call(:year,      _from, state), do: {:reply, {:ok, state.year},      state}
+  def handle_call(:game_id,   _from, state), do: {:reply, {:ok, state.game_id},   state}
+  def handle_call(:url,       _from, state), do: {:reply, {:ok, state.url},       state}
+  def handle_call(:game_info, _from, state), do: {:reply, {:ok, state.game_info}, state}
+  def handle_call(:events,    _from, state), do: {:reply, {:ok, state.events},    state}
 
-  def handle_call(:game_id, _from, {_year, game_id, _url, _game_info, _raw_html} = state) do
-    {:reply, {:ok, game_id}, state}
-  end
-
-  def handle_call(:url, _from, {_year, _game_id, url, _game_info, _raw_html} = state) do
-    {:reply, {:ok, url}, state}
-  end
-
-  def handle_call(:game_info, _from, {_year, _game_id, _url, game_info, _raw_html} = state) do
-    {:reply, {:ok, game_info}, state}
-  end
-
-  def handle_call(:fetch, _from, {year, game_id, url, game_info, raw_html} = state) do
+  def handle_call(:fetch, _from, state) do
     # TODO: add error replies
-    if raw_html != nil do
+    if state.html != nil do
       {:reply, :ok, state}
     else
-      response = HTTPoison.get! url
-      {:reply, :ok, {year, game_id, url, game_info, response.body}}
+      {:reply, :ok, put_in(state.html, HTTPoison.get!(state.url).body)}
     end
   end
 
-  def handle_call(:parse_game_info, _from, {year, game_id, url, game_info, raw_html} = state) do
+  def handle_call(:parse_game_info, _from, state) do
     # TODO: add error replies
 
-    props = Floki.find(raw_html, "td[align='center']")
+    props = Floki.find(state.html, "td[align='center']")
 
-    if game_id != actual_game_id(props) do
+    if state.game_id != actual_game_id(props) do
       {:reply, {:error, :invalid_game_id}, state}
     else
-      game_info = Map.merge(%{game_id: game_id}, parse_arena_info(props))
-      game_info = Map.merge(game_info, parse_game_time(props))
-      game_info = Map.merge(game_info, %{visitor: parse_team(props, 3, :away)})
-      game_info = Map.merge(game_info, %{home: parse_team(props, 16, :home)})
-
-      {:reply, :ok, {year, game_id, url, game_info, raw_html}}
+      {:reply, :ok, put_in(state.game_info, parse_game_info(state.game_id, props))}
     end
   end
 
@@ -122,6 +106,14 @@ defmodule ENHL.Report do
     |> String.split(" ")
     |> List.last
     |> String.to_integer
+  end
+
+  defp parse_game_info(game_id, props) do
+    %{game_id: game_id}
+    |> Map.merge(parse_arena_info(props))
+    |> Map.merge(parse_game_time(props))
+    |> Map.merge(%{visitor: parse_team(props, 3, :away)})
+    |> Map.merge(%{home: parse_team(props, 16, :home)})
   end
 
   defp parse_arena_info(props) do
