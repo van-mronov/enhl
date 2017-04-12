@@ -75,10 +75,13 @@ defmodule ENHL.Report do
   def handle_call(:game_info, _from, state), do: {:reply, {:ok, state.game_info}, state}
   def handle_call(:events,    _from, state), do: {:reply, {:ok, state.events},    state}
 
+  def handle_call(:fetch, _from, %{html: html} = state) when is_nil(html) do
+    {:reply, :ok, put_in(state.html, HTTPoison.get!(state.url).body)}
+  end
+
   def handle_call(:fetch, _from, state) do
     # TODO: add error replies
-    if is_nil(state.html), do:   {:reply, :ok, put_in(state.html, HTTPoison.get!(state.url).body)},
-                           else: {:reply, :ok, state}
+    {:reply, :ok, state}
   end
 
   def handle_call(:parse_game_info, _from, state) do
@@ -172,7 +175,7 @@ defmodule ENHL.Report do
     html
     |> Floki.find("td")
     |> common_event_info
-    |> Map.merge(parse_players(html))
+    |> Map.merge(parse_players(html |> Floki.find("table")))
   end
 
   defp common_event_info(props) do
@@ -189,25 +192,18 @@ defmodule ENHL.Report do
      }
   end
 
-  defp parse_players(html) do
-    tables = html |> Floki.find("table")
-    if Enum.empty?(tables) do
-      %{}
-    else
-      visitor_players = tables |> Enum.at(0) |> parse_players_table
-      offset = length(visitor_players) + 1
-      home_players = tables |> Enum.at(offset) |> parse_players_table
-      %{players: %{visitor: visitor_players, home: home_players}}
-    end
+  defp parse_players(tables) when length(tables) == 0, do: %{}
+
+  defp parse_players(tables) do
+    visitor_players = tables |> Enum.at(0) |> parse_players_table
+    offset = length(visitor_players) + 1
+    home_players = tables |> Enum.at(offset) |> parse_players_table
+    %{players: %{visitor: visitor_players, home: home_players}}
   end
 
-  defp parse_players_table(html) do
-    if is_nil(html) do
-      []
-    else
-      Floki.find(html, "font") |> Enum.map(&parse_player/1)
-    end
-  end
+  defp parse_players_table(html) when is_nil(html), do: []
+
+  defp parse_players_table(html), do: Floki.find(html, "font") |> Enum.map(&parse_player/1)
 
   defp parse_player(html) do
     [position, name] = html
@@ -223,11 +219,7 @@ defmodule ENHL.Report do
      }
   end
 
-  defp text_element_value(props, index) do
-    props |> Enum.fetch!(index) |> Floki.text
-  end
+  defp text_element_value(props, index), do: props |> Enum.fetch!(index) |> Floki.text
 
-  defp int_element_value(props, index) do
-    props |> text_element_value(index) |> String.to_integer
-  end
+  defp int_element_value(props, index), do: props |> text_element_value(index) |> String.to_integer
 end

@@ -4,25 +4,19 @@ defmodule ENHL.Registry do
   @doc """
   Starts the registry.
   """
-  def start_link do
-    GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
-  end
+  def start_link, do: GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
 
   @doc """
   Returns the report by `year` and `game_id`.
 
   Returns `{:ok, report}` if the report exists, `:error` otherwise.
   """
-  def report(year, game_id) do
-    GenServer.call(__MODULE__, {:report, year, game_id})
-  end
+  def report(year, game_id), do: GenServer.call(__MODULE__, {:report, year, game_id})
 
   @doc """
   Stops the registry.
   """
-  def stop do
-    GenServer.stop(__MODULE__)
-  end
+  def stop, do: GenServer.stop(__MODULE__)
 
   ## Server Callbacks
 
@@ -46,11 +40,7 @@ defmodule ENHL.Registry do
     end
   end
 
-  def handle_info(_msg, state) do
-    {:noreply, state}
-  end
+  def handle_info(_msg, state), do: {:noreply, state}
 
-  defp game_key(year, game_id) do
-    :crypto.hash(:sha256, "#{year}#{game_id}") |> Base.encode64
-  end
+  defp game_key(year, game_id), do: :crypto.hash(:sha256, "#{year}#{game_id}") |> Base.encode64
 end
