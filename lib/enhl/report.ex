@@ -77,8 +77,8 @@ defmodule ENHL.Report do
 
   def handle_call(:fetch, _from, state) do
     # TODO: add error replies
-    if state.html != nil, do:   {:reply, :ok, state},
-                          else: {:reply, :ok, put_in(state.html, HTTPoison.get!(state.url).body)}
+    if is_nil(state.html), do:   {:reply, :ok, put_in(state.html, HTTPoison.get!(state.url).body)},
+                           else: {:reply, :ok, state}
   end
 
   def handle_call(:parse_game_info, _from, state) do
@@ -120,7 +120,7 @@ defmodule ENHL.Report do
                               |> convert_nbsp
                               |> String.replace("at", "@")
                               |> String.split("@")
-                              |> Enum.map(fn x -> x |> String.trim end)
+                              |> Enum.map(&String.trim/1)
 
     attendance = attendance_str
                  |> String.split(" ")
@@ -169,7 +169,10 @@ defmodule ENHL.Report do
   end
 
   defp parse_event(html) do
-    html |> Floki.find("td") |> common_event_info
+    html
+    |> Floki.find("td")
+    |> common_event_info
+    |> Map.merge(parse_players(html))
   end
 
   defp common_event_info(props) do
@@ -183,6 +186,40 @@ defmodule ENHL.Report do
       elapsed:  elapsed,
       type:     text_element_value(props, 4),
       desc:     text_element_value(props, 5),
+     }
+  end
+
+  defp parse_players(html) do
+    tables = html |> Floki.find("table")
+    if Enum.empty?(tables) do
+      %{}
+    else
+      visitor_players = tables |> Enum.at(0) |> parse_players_table
+      offset = length(visitor_players) + 1
+      home_players = tables |> Enum.at(offset) |> parse_players_table
+      %{players: %{visitor: visitor_players, home: home_players}}
+    end
+  end
+
+  defp parse_players_table(html) do
+    if is_nil(html) do
+      []
+    else
+      Floki.find(html, "font") |> Enum.map(&parse_player/1)
+    end
+  end
+
+  defp parse_player(html) do
+    [position, name] = html
+                       |> Floki.attribute("title")
+                       |> List.first
+                       |> String.split("-")
+                       |> Enum.map(&String.trim/1)
+
+    %{
+      position: position,
+      name:     name,
+      number:   html |> Floki.text |> String.to_integer,
      }
   end
 
