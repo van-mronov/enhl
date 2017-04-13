@@ -40,6 +40,12 @@ defmodule ENHL.Registry do
     end
   end
 
+  def handle_info({:DOWN, ref, :process, _pid, _reason}, {games, refs}) do
+    {game, refs} = Map.pop(refs, ref)
+    games = Map.delete(games, game)
+    {:noreply, {games, refs}}
+  end
+
   def handle_info(_msg, state), do: {:noreply, state}
 
   defp game_key(year, game_id), do: :crypto.hash(:sha256, "#{year}#{game_id}") |> Base.encode64
